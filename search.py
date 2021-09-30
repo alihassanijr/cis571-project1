@@ -4,7 +4,7 @@
 # educational purposes provided that (1) you do not distribute or publish
 # solutions, (2) you retain this notice, and (3) you provide clear
 # attribution to UC Berkeley, including a link to http://ai.berkeley.edu.
-# 
+#
 # Attribution Information: The Pacman AI projects were developed at UC Berkeley.
 # The core projects and autograders were primarily created by John DeNero
 # (denero@cs.berkeley.edu) and Dan Klein (klein@cs.berkeley.edu).
@@ -18,6 +18,33 @@ Pacman agents (in searchAgents.py).
 """
 
 import util
+from util import Stack, Queue, PriorityQueue
+from game import Directions
+
+
+class State:
+    def __init__(self, position, move, parent=None):
+        self.position = position
+        self.move = move
+        self.parent = parent
+
+    def getParent(self):
+        return None if self.parent is None else self.parent
+
+    def isStartingPoint(self):
+        return self.getParent is None
+
+
+def getMoves(target_state):
+    moves = []
+    state = target_state
+    while state is not None and not state.isStartingPoint():
+        if state.move is None:
+            break
+        moves.append(state.move)
+        state = state.getParent()
+    return moves[::-1]
+
 
 class SearchProblem:
     """
@@ -67,37 +94,65 @@ def tinyMazeSearch(problem):
     Returns a sequence of moves that solves tinyMaze.  For any other maze, the
     sequence of moves will be incorrect, so only use this for tinyMaze.
     """
-    from game import Directions
     s = Directions.SOUTH
     w = Directions.WEST
     return  [s, s, w, s, w, w, s, w]
 
+
+
+def mediumMazeSearch(problem):
+    """
+    Returns a sequence of moves that solves tinyMaze.  For any other maze, the
+    sequence of moves will be incorrect, so only use this for tinyMaze.
+    """
+    n = Directions.NORTH
+    s = Directions.SOUTH
+    e = Directions.EAST
+    w = Directions.WEST
+    return [s, s, w, w, w, w, s, s, e, e, e, e, s, s, w, w, w, w, s,
+    s, e, e, e, e, s, s, w, w, w, w, s, s, e, e, e, e, s, s, s, w, w,
+    w, w, w, w, w, n, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w,
+    w, s, w, w, w, w, w, w, w, w, w
+    ]
+
+
+def generalSearch(problem, queue, weighted=False, heuristic=None):
+    visited_states = []
+    state = State(problem.getStartState(), None)
+    args = (state, 0) if weighted else (state,)
+    queue.push(*args)
+    while not queue.isEmpty() and not problem.isGoalState(state.position):
+        state = queue.pop()
+        if problem.isGoalState(state.position):
+            break
+        if state.position not in visited_states:
+            visited_states.append(state.position)
+            for position, move, cost in problem.getSuccessors(state.position):
+                if position not in visited_states:
+                    new_state = State(position, move, state)
+                    if weighted:
+                        cost = problem.getCostOfActions(getMoves(new_state))
+                        cost = cost if heuristic is None else cost + heuristic(position, problem)
+                        queue.push(new_state, cost)
+                    else:
+                        queue.push(new_state)
+    return getMoves(state)
+
+
 def depthFirstSearch(problem):
     """
-    Search the deepest nodes in the search tree first.
-
-    Your search algorithm needs to return a list of actions that reaches the
-    goal. Make sure to implement a graph search algorithm.
-
-    To get started, you might want to try some of these simple commands to
-    understand the search problem that is being passed in:
-
-    print("Start:", problem.getStartState())
-    print("Is the start a goal?", problem.isGoalState(problem.getStartState()))
-    print("Start's successors:", problem.getSuccessors(problem.getStartState()))
+    Searches the deepest nodes in the search tree first.
     """
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    return generalSearch(problem, queue=Stack(), weighted=False)
+
 
 def breadthFirstSearch(problem):
-    """Search the shallowest nodes in the search tree first."""
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    """Searches the shallowest nodes in the search tree first."""
+    return generalSearch(problem, queue=Queue(), weighted=False)
 
 def uniformCostSearch(problem):
-    """Search the node of least total cost first."""
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    """Searches the node of least total cost first."""
+    return generalSearch(problem, queue=PriorityQueue(), weighted=True)
 
 def nullHeuristic(state, problem=None):
     """
@@ -107,9 +162,8 @@ def nullHeuristic(state, problem=None):
     return 0
 
 def aStarSearch(problem, heuristic=nullHeuristic):
-    """Search the node that has the lowest combined cost and heuristic first."""
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    """Searches the node that has the lowest combined cost and heuristic first."""
+    return generalSearch(problem, queue=PriorityQueue(), weighted=True, heuristic=heuristic)
 
 
 # Abbreviations
